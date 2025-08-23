@@ -4,6 +4,7 @@ const { MongoClient } = require('mongodb');
 const { analizzaImmagineConOpenAI } = require('./vision');
 const mongoUri = process.env.MONGO_URI;
 const clientMongo = new MongoClient(mongoUri);
+const { decryptFile } = require('@open-wa/wa-automate');
 let db;
 
 // Connessione a MongoDB Atlas
@@ -32,7 +33,7 @@ function start(bot) {
         console.log('📷 Immagine ricevuta');
 
         // Decodifica immagine
-        const mediaData = await bot.decryptFile(message);
+        const mediaData = await decryptFile(message);
         const base64Image = Buffer.from(mediaData).toString('base64');
 
         // 🔍 AI: riconoscimento con OpenAI Vision
