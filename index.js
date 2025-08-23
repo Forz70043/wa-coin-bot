@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { create, Client } = require('@open-wa/wa-automate');
 const { MongoClient } = require('mongodb');
-
+const { analizzaImmagineConOpenAI } = require('./vision');
 const mongoUri = process.env.MONGO_URI;
 const clientMongo = new MongoClient(mongoUri);
 let db;
@@ -21,6 +21,7 @@ async function connectToDB() {
 function start(bot) {
   bot.onMessage(async (message) => {
     // Risposta base a comando testuale
+    console.log('📩 Messaggio ricevuto:', message.body);
     if (message.body === '!ciao') {
       await bot.sendText(message.from, '👋 Ciao! Inviami una foto di una moneta o banconota!');
     }
@@ -34,23 +35,26 @@ function start(bot) {
         const mediaData = await bot.decryptFile(message);
         const base64Image = Buffer.from(mediaData).toString('base64');
 
-        // Salvataggio nel database
+        // 🔍 AI: riconoscimento con OpenAI Vision
+        const riconoscimento = await analizzaImmagineConOpenAI(base64Image);
+
+        // 💾 Salvataggio nel DB
         const moneta = {
-          numero: message.from,
-          nome: message.sender.pushname || 'Sconosciuto',
-          timestamp: new Date(),
-          immagine_base64: base64Image,
-          messaggio_id: message.id,
-          mimetype: message.mimetype,
+            numero: message.from,
+            nome: message.sender.pushname || 'Sconosciuto',
+            timestamp: new Date(),
+            immagine_base64: base64Image,
+            riconoscimento
         };
 
         const result = await db.collection('monete').insertOne(moneta);
         console.log('💾 Moneta salvata con ID:', result.insertedId);
 
-        await bot.sendText(message.from, '✅ Immagine ricevuta e salvata nel database!');
+        // ✅ Risposta all'utente
+        await bot.sendText(message.from, `🔍 Risultato del riconoscimento:\n\n${riconoscimento}`);
       } catch (err) {
-        console.error('❌ Errore nella gestione dell\'immagine:', err);
-        await bot.sendText(message.from, '⚠️ Errore durante l\'elaborazione dell\'immagine.');
+        console.error('❌ Errore flusso:', err);
+        await bot.sendText(message.from, '⚠️ Errore durante il riconoscimento della moneta.');
       }
     }
   });
