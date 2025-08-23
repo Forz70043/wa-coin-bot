@@ -33,7 +33,7 @@ function start(bot) {
         console.log('📷 Immagine ricevuta');
         try {
             // Decodifica immagine
-            const mediaData = await decryptFile(message);
+            const mediaData = await decryptMedia(message);
             const base64Image = Buffer.from(mediaData).toString('base64');
         } catch (err) {
             console.error('❌ Errore decodifica immagine:', err);
